@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RRチップ管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            min-height: 100vh;
+            padding-bottom: 20px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+        .chip-display {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            box-shadow: 0 8px 32px rgba(251, 191, 36, 0.3);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            touch-action: manipulation;
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            touch-action: manipulation;
+        }
+        .btn-withdraw {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            touch-action: manipulation;
+            animation: glow 2s infinite;
+        }
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3); }
+            50% { box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6); }
+        }
+        /* ランキング用のスタイル */
+        .ranking-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+        .ranking-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        .rank-1 {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            border: 2px solid #ffd700;
+            box-shadow: 0 8px 32px rgba(255, 215, 0, 0.4);
+        }
+        .rank-2 {
+            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+            border: 2px solid #c0c0c0;
+            box-shadow: 0 8px 32px rgba(192, 192, 192, 0.4);
+        }
+        .rank-3 {
+            background: linear-gradient(135deg, #cd7f32 0%, #daa520 100%);
+            border: 2px solid #cd7f32;
+            box-shadow: 0 8px 32px rgba(205, 127, 50, 0.4);
+        }
+        .rank-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .rank-1 .rank-number {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        .rank-2 .rank-number {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+        }
+        .rank-3 .rank-number {
+            background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+        }
+        /* トーナメント用スタイル */
+        .tournament-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+        .tournament-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        .tournament-card.past {
+            opacity: 0.6;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .pending {
+            background-color: #fbbf24;
+            color: #92400e;
+        }
+        .approved {
+            background-color: #10b981;
+            color: white;
+        }
+        .rejected {
+            background-color: #ef4444;
+            color: white;
+        }
+        .upcoming {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .ongoing {
+            background-color: #10b981;
+            color: white;
+        }
+        .completed {
+            background-color: #6b7280;
+            color: white;
+        }
+        /* 引き出し確認画面 */
+        .withdraw-confirm {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+        .withdraw-confirm h1 {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .withdraw-confirm .user-name {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            opacity: 0.9;
+        }
+        .withdraw-confirm .amount {
+            font-size: 4rem;
+            font-weight: bold;
+            margin-bottom: 3rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        /* スマホ向け最適化 */
+        @media (max-width: 640px) {
+            .container {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+            .chip-display {
+                font-size: 0.9rem;
+            }
+            #chipBalance {
+                font-size: 2.5rem;
+            }
+            .withdraw-confirm h1 {
+                font-size: 2rem;
+            }
+            .withdraw-confirm .user-name {
+                font-size: 1.5rem;
+            }
+            .withdraw-confirm .amount {
+                font-size: 3rem;
+            }
+        }
+        /* タッチ操作の最適化 */
+        button {
+            min-height: 44px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        input, select, textarea {
+            min-height: 44px;
+            font-size: 16px; /* ズームを防ぐ */
+        }
+        /* ボトムナビゲーション */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 0;
+            z-index: 1000;
+        }
+        .bottom-nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 4px;
+            color: #9ca3af;
+            transition: color 0.3s ease;
+        }
+        .bottom-nav-item.active {
+            color: #fbbf24;
+        }
+        .bottom-nav-item i {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .bottom-nav-item span {
+            font-size: 10px;
+            display: block;
+        }
+        /* 管理者用スタイル */
+        .admin-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .admin-title {
+            color: #fbbf24;
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container mx-auto px-4 py-6 max-w-md min-h-screen pb-20">
+        <!-- 初期選択画面 -->
+        <div id="initialScreen" class="text-center">
+            <header class="mb-8">
+                <h1 class="text-3xl font-bold text-white mb-2">
+                    <i class="fas fa-coins mr-2"></i>RRチップ管理
+                </h1>
+                <p class="text-gray-300 text-lg">チップ管理システム</p>
+            </header>
+            
+            <div class="glass-card p-6 mb-6">
+                <h2 class="text-xl font-semibold text-white mb-6">ようこそ</h2>
+                <div class="space-y-4">
+                    <button onclick="showLogin()" class="w-full btn-primary text-white py-4 rounded-lg font-semibold text-lg">
+    <i class="fas fa-sign-in-alt mr-2"></i>ログイン
+</button>
+<button onclick="showCreateAccount()" class="w-full bg-white bg-opacity-10 text-white py-3 rounded-lg font-semibold text-base border border-white border-opacity-20 hover:bg-opacity-20">
+    <i class="fas fa-user-plus mr-2"></i>アカウントを作成
+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- アカウント作成画面 -->
+        <div id="createAccountScreen" class="hidden">
+            <div class="glass-card p-6">
+                <h2 class="text-xl font-semibold text-white mb-4 text-center">アカウント作成</h2>
+                <div class="space-y-4">
+                    <input type="text" id="newUsername" placeholder="ポーカーネーム" 
+                           class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+<input type="password" id="newPassword" placeholder="パスワード" 
+                           class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <input type="password" id="confirmPassword" placeholder="パスワード（確認）" 
+                           class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <div class="flex space-x-3">
+                        <button onclick="createAccount()" class="flex-1 btn-success text-white py-3 rounded-lg font-semibold">
+                            作成する
+                        </button>
+                        <button onclick="backToInitial()" class="flex-1 bg-gray-600 text-white py-3 rounded-lg font-semibold">
+                            戻る
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ログイン画面 -->
+        <div id="loginScreen" class="hidden">
+            <div class="glass-card p-6 mb-6">
+                <h2 class="text-xl font-semibold text-white mb-4 text-center">ログイン</h2>
+                <div class="space-y-4">
+                    <input type="text" id="username" placeholder="ユーザー名" 
+                           class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <input type="password" id="password" placeholder="パスワード" 
+                           class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <div class="flex space-x-3">
+                        <button onclick="login()" class="flex-1 btn-primary text-white py-3 rounded-lg font-semibold">
+                            ログイン
+                        </button>
+                        <button onclick="backToInitial()" class="flex-1 bg-gray-600 text-white py-3 rounded-lg font-semibold">
+                            戻る
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 顧客ダッシュボード（新UI） -->
+        <div id="customerDashboard" class="hidden">
+            <!-- ユーザー情報 -->
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 id="customerName" class="text-lg font-semibold text-white"></h3>
+                        <p id="customerId" class="text-gray-300 text-sm"></p>
+                    </div>
+                    <button onclick="logout()" class="text-gray-300 hover:text-white" title="ログアウト">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- チップ残高 -->
+            <div class="chip-display p-6 mb-6 text-center">
+                <p class="text-amber-900 text-sm mb-2">現在のチップ残高</p>
+                <div id="chipBalance" class="text-4xl font-bold text-amber-900 mb-2">0</div>
+                <p class="text-amber-800 text-sm">チップ</p>
+            </div>
+
+            <!-- 6つのメインボタン -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="showChipManagement()" class="btn-primary text-white py-4 rounded-lg font-semibold text-sm">
+                    <i class="fas fa-coins mr-2"></i>チップの入出金
+                </button>
+                <button onclick="showTransactionHistory()" class="btn-success text-white py-4 rounded-lg font-semibold text-sm">
+                    <i class="fas fa-history mr-2"></i>チップ履歴
+                </button>
+                <button onclick="showRanking()" class="btn-withdraw text-white py-4 rounded-lg font-semibold text-sm">
+                    <i class="fas fa-trophy mr-2"></i>ラボリングチップランキング
+                </button>
+                <button onclick="showTournamentRanking()" class="bg-purple-600 text-white py-4 rounded-lg font-semibold text-sm hover:bg-purple-700">
+                    <i class="fas fa-medal mr-2"></i>トーナメントランキング
+                </button>
+                <button onclick="showTournamentSchedule()" class="bg-indigo-600 text-white py-4 rounded-lg font-semibold text-sm hover:bg-indigo-700">
+                    <i class="fas fa-calendar-alt mr-2"></i>トーナメント予定表
+                </button>
+</div>
+        </div>
+
+        <!-- チップ管理画面 -->
+        <div id="chipManagementScreen" class="hidden">
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">
+                        <i class="fas fa-coins mr-2"></i>チップ管理
+                    </h3>
+                    <button onclick="hideChipManagement()" class="text-gray-300 hover:text-white">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- チップ残高表示 -->
+            <div class="chip-display p-4 mb-4 text-center">
+                <p class="text-amber-900 text-sm mb-1">現在のチップ残高</p>
+                <div id="chipBalanceManagement" class="text-2xl font-bold text-amber-900">0</div>
+                <p class="text-amber-800 text-xs">チップ</p>
+            </div>
+
+            <!-- 操作ボタン -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <button onclick="showWithdrawForm()" class="btn-withdraw text-white py-3 rounded-lg font-semibold">
+                    <i class="fas fa-minus-circle mr-2"></i>引き出し
+                </button>
+                <button onclick="showDepositForm()" class="btn-success text-white py-3 rounded-lg font-semibold">
+                    <i class="fas fa-plus-circle mr-2"></i>入金
+                </button>
+            </div>
+        </div>
+
+        <!-- チップ履歴画面 -->
+        <div id="transactionHistoryScreen" class="hidden">
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">
+                        <i class="fas fa-history mr-2"></i>チップ履歴
+                    </h3>
+                    <button onclick="hideTransactionHistory()" class="text-gray-300 hover:text-white">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="transactionHistoryList" class="space-y-2">
+                <!-- 履歴アイテムがここに動的に追加されます -->
+            </div>
+        </div>
+
+        <!-- RRメンバーチップ表（ランキング） -->
+        <div id="rankingScreen" class="hidden">
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">
+                        <i class="fas fa-trophy mr-2 text-yellow-400"></i>RRメンバーチップ表
+                    </h3>
+                    <button onclick="hideRanking()" class="text-gray-300 hover:text-white">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="rankingList" class="space-y-3">
+                <!-- ランキングデータがここに動的に追加されます -->
+            </div>
+        </div>
+
+        <!-- RRトーナメントインマネランキング -->
+        <div id="tournamentRankingScreen" class="hidden">
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">
+                        <i class="fas fa-medal mr-2 text-purple-400"></i>RRトーナメントインマネランキング
+                    </h3>
+                    <button onclick="hideTournamentRanking()" class="text-gray-300 hover:text-white">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="tournamentRankingList" class="space-y-3">
+                <!-- トーナメントランキングデータがここに動的に追加されます -->
+            </div>
+        </div>
+
+        <!-- RRトーナメント予定表 -->
+        <div id="tournamentScheduleScreen" class="hidden">
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">
+                        <i class="fas fa-calendar-alt mr-2 text-indigo-400"></i>RRトーナメント予定表
+                    </h3>
+                    <button onclick="hideTournamentSchedule()" class="text-gray-300 hover:text-white">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="tournamentScheduleList" class="space-y-3">
+                <!-- トーナメント予定データがここに動的に追加されます -->
+            </div>
+        </div>
+
+        <!-- 管理者ダッシュボード -->
+        <div id="adminDashboard" class="hidden">
+            <!-- 管理者情報 -->
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-semibold text-white">管理者画面</h3>
+                        <p class="text-gray-300 text-sm">全顧客のチップ管理</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="logout()" class="text-gray-300 hover:text-white" title="ログアウト">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 承認待ち入金申請 -->
+            <div class="admin-section">
+                <div class="admin-title">承認待ち入金申請</div>
+                <div id="pendingRequests" class="space-y-3">
+                    <!-- 申請アイテムがここに動的に追加されます -->
+                </div>
+            </div>
+
+            <!-- トーナメント管理 -->
+            <div class="admin-section">
+                <div class="admin-title">トーナメント管理</div>
+                <div class="space-y-3">
+                    <button onclick="showTournamentManagement()" class="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold">
+                        <i class="fas fa-trophy mr-2"></i>トーナメントを管理
+                    </button>
+                    <button onclick="showTournamentPrizeManagement()" class="w-full bg-green-600 text-white py-2 rounded-lg font-semibold">
+                        <i class="fas fa-medal mr-2"></i>トーナメントプライズ配分
+                    </button>
+                </div>
+            </div>
+
+            <!-- レーキ管理 -->
+            <div class="admin-section">
+                <div class="admin-title">レーキ管理</div>
+                <div class="glass-card p-3 mb-3">
+                    <div class="text-center">
+                        <div class="text-yellow-300 text-lg font-bold" id="totalRakeAmount">0</div>
+                        <div class="text-gray-300 text-sm">総レーキ金額（円）</div>
+                        <div class="text-blue-300 text-sm mt-1" id="totalRakeRecords">0</div>
+                        <div class="text-gray-400 text-xs">記録回数</div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <input type="number" id="rakeAmount" placeholder="レーキ金額（円）" min="0"
+                           class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30">
+                    <input type="text" id="rakeMemo" placeholder="メモ（任意）"
+                           class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30">
+                    <button onclick="recordRake()" class="w-full bg-yellow-600 text-white py-2 rounded-lg font-semibold">
+                        <i class="fas fa-plus mr-2"></i>レーキを記録
+                    </button>
+                    <button onclick="showRakeHistory()" class="w-full bg-gray-600 text-white py-2 rounded-lg font-semibold">
+                        <i class="fas fa-history mr-2"></i>レーキ履歴
+                    </button>
+                </div>
+            </div>
+
+            <!-- チップ管理機能 -->
+            <div class="admin-section">
+                <div class="admin-title">チップ管理</div>
+                <div class="space-y-3">
+                    <select id="selectUserForChip" class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white border border-white border-opacity-30">
+                        <option value="">ユーザーを選択</option>
+                    </select>
+                    <div class="flex space-x-2">
+                        <input type="number" id="chipAmount" placeholder="枚数" min="1"
+                               class="flex-1 px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30">
+                        <button onclick="adjustChips('add')" class="bg-green-600 text-white px-4 py-2 rounded text-sm font-semibold">
+                            増加
+                        </button>
+                        <button onclick="adjustChips('subtract')" class="bg-red-600 text-white px-4 py-2 rounded text-sm font-semibold">
+                            減少
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 全顧客のチップ状況 -->
+            <div class="admin-section">
+                <div class="admin-title">全顧客のチップ状況</div>
+                <div id="allCustomers" class="space-y-2">
+                    <!-- 顧客リストがここに動的に追加されます -->
+                </div>
+            </div>
+        </div>
+
+        <!-- トーナメント管理画面（管理者） -->
+        <div id="tournamentManagementScreen" class="hidden">
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">
+                        <i class="fas fa-trophy mr-2"></i>トーナメント管理
+                    </h3>
+                    <button onclick="hideTournamentManagement()" class="text-gray-300 hover:text-white">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 新規トーナメント追加 -->
+            <div class="glass-card p-4 mb-4">
+                <h4 class="text-white font-semibold mb-3">新規トーナメント追加</h4>
+                <div class="space-y-3">
+                    <input type="text" id="tournamentName" placeholder="トーナメント名"
+                           class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30">
+                    <input type="datetime-local" id="tournamentDateTime"
+                           class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white border border-white border-opacity-30">
+                    <input type="datetime-local" id="registrationStart" placeholder="受付開始（ST）"
+                           class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white border border-white border-opacity-30">
+                    <input type="datetime-local" id="registrationEnd" placeholder="受付終了（RC）"
+                           class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white border border-white border-opacity-30">
+                    <input type="number" id="entryFee" placeholder="エントリー料金（円）" min="0"
+                           class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30">
+                    <textarea id="tournamentDescription" placeholder="トーナメント詳細" rows="3"
+                              class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30"></textarea>
+                    <button onclick="addTournament()" class="w-full bg-purple-600 text-white py-2 rounded-lg font-semibold">
+                        <i class="fas fa-plus mr-2"></i>トーナメントを追加
+                    </button>
+                </div>
+            </div>
+
+            <!-- トーナメント一覧 -->
+            <div id="tournamentList" class="space-y-3">
+                <!-- トーナメントデータがここに動的に追加されます -->
+            </div>
+        </div>
+
+        <!-- トーナメントプライズ管理画面 -->
+        <div id="tournamentPrizeScreen" class="hidden">
+            <div class="glass-card p-4 mb-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-white">
+                        <i class="fas fa-medal mr-2"></i>トーナメントプライズ配分
+                    </h3>
+                    <button onclick="hideTournamentPrizeManagement()" class="text-gray-300 hover:text-white">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <select id="selectTournamentForPrize" class="w-full px-3 py-2 rounded-lg bg-white bg-opacity-20 text-white border border-white border-opacity-30"
+                        onchange="loadTournamentForPrize()">
+                    <option value="">トーナメントを選択</option>
+                </select>
+
+                <div id="prizeDistributionArea" class="hidden">
+                    <h4 class="text-white font-semibold mb-3">入賞者を選択</h4>
+                    <div id="prizeWinnersList" class="space-y-3">
+                        <!-- 入賞者入力フィールドがここに追加されます -->
+                    </div>
+                    <button onclick="addPrizeWinner()" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold mb-3">
+                        <i class="fas fa-plus mr-2"></i>入賞者を追加
+                    </button>
+                    <button onclick="distributePrizes()" class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold">
+                        <i class="fas fa-gift mr-2"></i>プライズを配分
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 引き出し申請フォーム -->
+        <div id="withdrawForm" class="hidden">
+            <div class="glass-card p-6">
+                <h3 class="text-xl font-semibold text-white mb-4">チップ引き出し</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-300 text-sm mb-2">引き出し枚数</label>
+                        <input type="number" id="withdrawAmount" min="1" 
+                               class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                    <div class="flex space-x-3">
+                        <button onclick="submitWithdraw()" class="flex-1 btn-withdraw text-white py-3 rounded-lg font-semibold">
+                            引き出す
+                        </button>
+                        <button onclick="hideForms()" class="flex-1 bg-gray-600 text-white py-3 rounded-lg font-semibold">
+                            キャンセル
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 入金申請フォーム -->
+        <div id="depositForm" class="hidden">
+            <div class="glass-card p-6">
+                <h3 class="text-xl font-semibold text-white mb-4">チップ入金申請</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-300 text-sm mb-2">入金枚数</label>
+                        <input type="number" id="depositAmount" min="1" 
+                               class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                    <div class="flex space-x-3">
+                        <button onclick="submitDeposit()" class="flex-1 btn-success text-white py-3 rounded-lg font-semibold">
+                            申請する
+                        </button>
+                        <button onclick="hideForms()" class="flex-1 bg-gray-600 text-white py-3 rounded-lg font-semibold">
+                            キャンセル
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 引き出し確認画面 -->
+        <div id="withdrawConfirm" class="withdraw-confirm hidden">
+            <div class="text-center w-full max-w-sm">
+                <h1 class="text-white font-bold mb-4">引き出し申請</h1>
+                <div class="user-name text-white mb-2">ユーザー名</div>
+                <div class="amount text-yellow-300 mb-8">0 チップ</div>
+                <button onclick="confirmWithdraw()" class="w-full bg-green-600 text-white py-4 rounded-lg font-semibold text-lg mb-4">
+                    確認してもらった
+                </button>
+            </div>
+        </div>
+
+        <!-- ボトムナビゲーション（顧客用） -->
+        <div id="customerBottomNav" class="bottom-nav hidden">
+            <div class="flex">
+                <div class="bottom-nav-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>ログアウト</span>
+                </div>
+                <div class="bottom-nav-item" onclick="showTournamentSchedule()">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>トーナメント</span>
+                </div>
+                <div class="bottom-nav-item" onclick="showTournamentRanking()">
+                    <i class="fas fa-medal"></i>
+                    <span>トーナメントランキング</span>
+                </div>
+                <div class="bottom-nav-item" onclick="showRanking()">
+                    <i class="fas fa-trophy"></i>
+                    <span>チップランキング</span>
+                </div>
+                <div class="bottom-nav-item" onclick="showTransactionHistory()">
+                    <i class="fas fa-history"></i>
+                    <span>チップ履歴</span>
+                </div>
+                <div class="bottom-nav-item" onclick="showChipManagement()">
+                    <i class="fas fa-coins"></i>
+                    <span>入出金</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./app.js"></script>
+</body>
+</html>
