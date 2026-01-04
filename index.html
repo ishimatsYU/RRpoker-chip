@@ -157,9 +157,9 @@
             background-color: #6b7280;
             color: white;
         }
-        /* 引き出し確認画面 */
+        /* 引き出し画面 */
         .withdraw-confirm {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            background: linear-gradient(135deg, #8b5cf6 0%, #f53535 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -262,6 +262,20 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+
+
+        /* ===== ランキング内の文字色をコントロール（見やすさ改善） ===== */
+.name-text { color: #ffffff; }
+.handle-text { color: rgba(209,213,219,1); }  /* gray-300 */
+.amount-text { color: rgba(253,224,71,1); }   /* yellow-300 */
+.label-text { color: rgba(209,213,219,1); }   /* gray-300 */
+
+/* 上位3位カードは背景が明るいので、文字をダークに変える */
+.rank-1 .name-text, .rank-2 .name-text, .rank-3 .name-text { color: #0f172a; }           /* slate-900 */
+.rank-1 .handle-text, .rank-2 .handle-text, .rank-3 .handle-text { color: rgba(15,23,42,.70); }
+.rank-1 .amount-text, .rank-2 .amount-text, .rank-3 .amount-text { color: #0f172a; }     /* slate-900 */
+.rank-1 .label-text, .rank-2 .label-text, .rank-3 .label-text { color: rgba(15,23,42,.85); }
+
     </style>
 </head>
 <body>
@@ -278,12 +292,12 @@
             <div class="glass-card p-6 mb-6">
                 <h2 class="text-xl font-semibold text-white mb-6">ようこそ</h2>
                 <div class="space-y-4">
-                    <button onclick="showLogin()" class="w-full btn-primary text-white py-4 rounded-lg font-semibold text-lg">
-    <i class="fas fa-sign-in-alt mr-2"></i>ログイン
-</button>
-<button onclick="showCreateAccount()" class="w-full bg-white bg-opacity-10 text-white py-3 rounded-lg font-semibold text-base border border-white border-opacity-20 hover:bg-opacity-20">
-    <i class="fas fa-user-plus mr-2"></i>アカウントを作成
-</button>
+                    <button onclick="showLogin()" class="w-full btn-primary text-white py-5 rounded-lg font-semibold text-lg">
+                        <i class="fas fa-sign-in-alt mr-2"></i>ログイン
+                    </button>
+                    <button onclick="showCreateAccount()" class="w-full btn-success bg-transparent/40 py-2 rounded-lg font-semibold text-base">
+                        <i class="fas fa-user-plus mr-2"></i>アカウントを作成
+                    </button>
                 </div>
             </div>
         </div>
@@ -294,8 +308,8 @@
                 <h2 class="text-xl font-semibold text-white mb-4 text-center">アカウント作成</h2>
                 <div class="space-y-4">
                     <input type="text" id="newUsername" placeholder="ポーカーネーム" 
-                           class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
-<input type="password" id="newPassword" placeholder="パスワード" 
+                    class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <input type="password" id="newPassword" placeholder="パスワード" 
                            class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
                     <input type="password" id="confirmPassword" placeholder="パスワード（確認）" 
                            class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -316,7 +330,7 @@
             <div class="glass-card p-6 mb-6">
                 <h2 class="text-xl font-semibold text-white mb-4 text-center">ログイン</h2>
                 <div class="space-y-4">
-                    <input type="text" id="username" placeholder="ユーザー名" 
+                    <input type="text" id="username" placeholder="ポーカーネーム" 
                            class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
                     <input type="password" id="password" placeholder="パスワード" 
                            class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 text-white placeholder-gray-300 border border-white border-opacity-30 focus:outline-none focus:ring-2 focus:ring-blue-400">
@@ -371,7 +385,8 @@
                 <button onclick="showTournamentSchedule()" class="bg-indigo-600 text-white py-4 rounded-lg font-semibold text-sm hover:bg-indigo-700">
                     <i class="fas fa-calendar-alt mr-2"></i>トーナメント予定表
                 </button>
-</div>
+
+            </div>
         </div>
 
         <!-- チップ管理画面 -->
@@ -640,6 +655,11 @@
                     <button onclick="distributePrizes()" class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold">
                         <i class="fas fa-gift mr-2"></i>プライズを配分
                     </button>
+                    <button onclick="revokeLatestPrizeBatch()"
+                    class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold mt-3">
+                    <i class="fas fa-undo mr-2"></i
+                    </button>
+
                 </div>
             </div>
         </div>
@@ -731,6 +751,6 @@
         </div>
     </div>
 
-    <script src="./app.js"></script>
+    <script src="./app.fixed.js"></script>
 </body>
 </html>
