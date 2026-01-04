@@ -187,14 +187,13 @@ function backToInitial() {
     showInitialScreen();
 }
 
-// 新規アカウント作成
 async function createAccount() {
-    const username = document.getElementById('newUsername').value.trim();
+    const pokerName = document.getElementById('newUsername').value.trim(); // ←ポーカーネーム
     const password = document.getElementById('newPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
 
-    if (!username || !password || !confirmPassword) {
-        alert('すべての項目を入力してください。');
+    if (!pokerName || !password) {
+        alert('ポーカーネームとパスワードを入力してください。');
         return;
     }
 
@@ -203,53 +202,49 @@ async function createAccount() {
         return;
     }
 
-    if (username.includes(' ')) {
-        alert('ユーザー名に空白文字は使用できません。');
+    if (pokerName.includes(' ')) {
+        alert('ポーカーネームに空白文字は使用できません。');
         return;
     }
 
     try {
-        // 既存ユーザー確認
         const existingUsers = await fetchData('users');
-        if (existingUsers.find(u => u.username === username)) {
-            alert('このユーザー名は既に使用されています。');
+        if (existingUsers.find(u => u.username === pokerName)) {
+            alert('このポーカーネームは既に使用されています。');
             return;
         }
 
-        // 新規ユーザー作成
         const userData = {
-            username: username,
+            username: pokerName, // ←username欄にポーカーネームを入れておく（他のコードが楽）
             password: password,
-            name: username,
+            name: pokerName,     // ←表示名も同じにする（互換性のため）
             role: 'customer',
             created_at: Date.now()
         };
 
         const newUser = await createRecord('users', userData);
 
-        // チップデータ作成（初期残高0）
-        const chipData = {
+        await createRecord('chips', {
             user_id: newUser.id,
             balance: 0,
             created_at: Date.now(),
             updated_at: Date.now()
-        };
-
-        await createRecord('chips', chipData);
+        });
 
         alert('アカウントを作成しました。ログインしてください。');
-        
+
         // フォームをクリア
         document.getElementById('newUsername').value = '';
-document.getElementById('newPassword').value = '';
+        document.getElementById('newPassword').value = '';
         document.getElementById('confirmPassword').value = '';
-        
+
         showLogin();
     } catch (error) {
         console.error('アカウント作成エラー:', error);
         alert('アカウント作成に失敗しました。');
     }
 }
+
 
 // ログイン処理
 async function login() {
@@ -307,6 +302,7 @@ function showCustomerDashboard() {
     document.getElementById('customerName').textContent = currentUser.name;
     document.getElementById('customerId').textContent = `@${currentUser.username}`;
     document.getElementById('chipBalance').textContent = currentUserData.balance.toLocaleString();
+    showCustomerBottomNav();
     loadTransactionHistory();
 }
 
@@ -413,6 +409,8 @@ function logout() {
 function showTransactionHistory() {
     hideAllScreens();
     document.getElementById('transactionHistoryScreen').classList.remove('hidden');
+    showCustomerBottomNav();
+
     loadTransactionHistory();
 }
 
@@ -420,54 +418,75 @@ function hideTransactionHistory() {
     showCustomerDashboard();
 }
 
-// 取引履歴を読み込む
+// 取引履歴を読み込む（プライズ対応版）
 async function loadTransactionHistory() {
     try {
         const requests = await fetchData('requests');
         const userRequests = requests.filter(r => r.user_id === currentUser.id);
-        
+
+        // ★追加：トーナメント名を履歴に表示するための準備
+        const tournaments = await fetchData('tournaments');
+        const tournamentMap = new Map(tournaments.map(t => [t.id, t.name]));
+
         // 日付順にソート（新しい順）
         userRequests.sort((a, b) => b.created_at - a.created_at);
-        
+
         const historyContainer = document.getElementById('transactionHistoryList');
         historyContainer.innerHTML = '';
-        
+
         if (userRequests.length === 0) {
             historyContainer.innerHTML = '<p class="text-gray-400 text-center">取引履歴がありません</p>';
             return;
         }
-        
+
         for (const request of userRequests) {
             const date = new Date(request.created_at);
             const dateStr = date.toLocaleDateString('ja-JP');
             const timeStr = date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-            
+
+            // ステータス表示（既存のまま）
+            const statusClass =
+                request.status === 'approved' ? 'text-green-400' :
+                request.status === 'rejected' ? 'text-red-400' : 'text-yellow-400';
+
+            const statusText =
+                request.status === 'approved' ? '承認済み' :
+                request.status === 'rejected' ? '却下済み' : '承認待ち';
+
+            // ★追加：表示ラベルをタイプ別に作る（prize対応）
+            let typeLabel = '調整';
+
+            if (request.type === 'withdraw') typeLabel = '引き出し';
+            else if (request.type === 'deposit') typeLabel = '入金';
+            else if (request.type === 'adjust') typeLabel = '調整';
+            else if (request.type === 'prize') {
+                const tname = tournamentMap.get(request.tournament_id) ?? 'トーナメント';
+                const pos = request.position ? `${request.position}位` : '';
+                typeLabel = `プライズ（${tname}${pos ? ' ' + pos : ''}）`;
+            }
+
             const historyItem = document.createElement('div');
             historyItem.className = 'glass-card p-4 mb-3';
-            
-            const statusClass = request.status === 'approved' ? 'text-green-400' : 
-                             request.status === 'rejected' ? 'text-red-400' : 'text-yellow-400';
-            const statusText = request.status === 'approved' ? '承認済み' : 
-                              request.status === 'rejected' ? '却下済み' : '承認待ち';
-            
+
             historyItem.innerHTML = `
                 <div class="flex justify-between items-start mb-2">
                     <div>
-                        <span class="text-white font-semibold">${request.type === 'withdraw' ? '引き出し' : (request.type === 'deposit' ? '入金' : '調整')}</span>
+                        <span class="text-white font-semibold">${typeLabel}</span>
                         <span class="${statusClass} text-sm ml-2">${statusText}</span>
                     </div>
-                    <span class="text-yellow-300 font-bold">${request.amount.toLocaleString()} チップ</span>
+                    <span class="text-yellow-300 font-bold">${Number(request.amount || 0).toLocaleString()} チップ</span>
                 </div>
                 <div class="text-gray-300 text-sm">
                     <i class="fas fa-calendar mr-1"></i>${dateStr} ${timeStr}
                 </div>
             `;
-            
+
             historyContainer.appendChild(historyItem);
         }
     } catch (error) {
         console.error('取引履歴読み込みエラー:', error);
-        document.getElementById('transactionHistoryList').innerHTML = '<p class="text-red-400 text-center">履歴の読み込みに失敗しました</p>';
+        document.getElementById('transactionHistoryList').innerHTML =
+            '<p class="text-red-400 text-center">履歴の読み込みに失敗しました</p>';
     }
 }
 
@@ -475,6 +494,7 @@ function showChipManagement() {
     hideAllScreens();
     document.getElementById('chipManagementScreen').classList.remove('hidden');
     document.getElementById('chipBalanceManagement').textContent = currentUserData.balance.toLocaleString();
+    showCustomerBottomNav();
 }
 
 function hideChipManagement() {
@@ -484,6 +504,7 @@ function hideChipManagement() {
 function showTournamentRanking() {
     hideAllScreens();
     document.getElementById('tournamentRankingScreen').classList.remove('hidden');
+    showCustomerBottomNav();
     loadTournamentRanking();
 }
 
@@ -494,6 +515,7 @@ function hideTournamentRanking() {
 function showTournamentSchedule() {
     hideAllScreens();
     document.getElementById('tournamentScheduleScreen').classList.remove('hidden');
+    showCustomerBottomNav();
     loadTournamentSchedule();
 }
 
@@ -501,9 +523,7 @@ function hideTournamentSchedule() {
     showCustomerDashboard();
 }
 
-function showLineAddFriend() {
-    alert('LINE公式アカウントを友だち追加してください。\nLINE ID: @rrchip管理\nまたはQRコードをスキャンしてください。');
-}
+
 
 // トーナメント管理（管理者）
 function showTournamentManagement() {
@@ -720,6 +740,7 @@ function removePrizeWinner(button) {
 }
 
 // プライズ配分
+// プライズ配分（安定版：batch_id付き＋履歴保存＋ランキング更新）
 async function distributePrizes() {
     const tournamentId = document.getElementById('selectTournamentForPrize').value;
     if (!tournamentId) {
@@ -729,17 +750,17 @@ async function distributePrizes() {
 
     const winners = [];
     const winnerDivs = document.querySelectorAll('#prizeWinnersList .glass-card');
-    
+
     for (let i = 0; i < winnerDivs.length; i++) {
         const div = winnerDivs[i];
-        const userId = div.querySelector('.prize-winner-select').value;
-        const chips = parseInt(div.querySelector('.prize-chips-input').value);
-        
-        if (!userId || !chips || chips <= 0) {
+        const userId = div.querySelector('.prize-winner-select')?.value;
+        const chips = parseInt(div.querySelector('.prize-chips-input')?.value, 10);
+
+        if (!userId || !Number.isFinite(chips) || chips <= 0) {
             alert(`${i + 1}位のユーザーとチップ数を正しく入力してください。`);
             return;
         }
-        
+
         winners.push({
             user_id: userId,
             position: i + 1,
@@ -753,31 +774,65 @@ async function distributePrizes() {
     }
 
     try {
+        const batchId = _newId();     // 配布1回分のID
+        const now = Date.now();       // 時刻は1回だけ
+
         for (const winner of winners) {
-            const resultData = {
+            // 1) tournament_results に保存（取り消し用に batch_id 必須）
+            await createRecord('tournament_results', {
                 tournament_id: tournamentId,
                 user_id: winner.user_id,
                 position: winner.position,
                 chips_won: winner.chips_won,
-                created_at: Date.now()
-            };
-            
-            await createRecord('tournament_results', resultData);
-            
-            // ユーザーのチップ残高を増加
+                batch_id: batchId,
+                created_at: now
+            });
+
+            // 2) チップ残高を増加
             const chipData = await fetchSingleRecord('chips', null, `user_id=${winner.user_id}`);
             if (chipData) {
-                chipData.balance += winner.chips_won;
-                chipData.updated_at = Date.now();
-                await updateRecord('chips', chipData.id, chipData);
+                await updateRecord('chips', chipData.id, {
+                    balance: (chipData.balance || 0) + winner.chips_won,
+                    updated_at: now
+                });
+            } else {
+                await createRecord('chips', {
+                    user_id: winner.user_id,
+                    balance: winner.chips_won,
+                    created_at: now,
+                    updated_at: now
+                });
             }
+
+            // 3) 履歴（requests）に「プライズ」を残す（ここにも batch_id 入れる）
+            await createRecord('requests', {
+                user_id: winner.user_id,
+                type: 'prize',
+                amount: winner.chips_won,     // +で入る
+                status: 'approved',
+                created_at: now,
+                updated_at: now,
+                tournament_id: tournamentId,
+                position: winner.position,
+                batch_id: batchId
+            });
         }
-        
+
         alert('プライズを配分しました。');
+
+        // 表示中なら更新
+        if (typeof refreshRankingIfVisible === 'function') refreshRankingIfVisible();
+        if (typeof loadTournamentRanking === 'function') loadTournamentRanking();
+        if (typeof loadTransactionHistory === 'function') loadTransactionHistory();
+
+        // 入賞者欄をリセット（次回のため）
+        document.getElementById('prizeWinnersList').innerHTML = '';
+        prizeWinnersCount = 0;
+
         hideTournamentPrizeManagement();
     } catch (error) {
         console.error('プライズ配分エラー:', error);
-        alert('プライズの配分に失敗しました。');
+        alert('プライズの配分に失敗しました。\n原因: ' + (error?.message || error));
     }
 }
 
@@ -875,31 +930,30 @@ async function loadTournamentRanking() {
             const rankingItem = document.createElement('div');
             rankingItem.className = 'ranking-item flex items-center justify-between p-4 rounded-lg mb-3';
             
-            // 上位3位は特別な装飾
-            if (rank === 1) {
-                rankingItem.classList.add('ranking-first');
-            } else if (rank === 2) {
-                rankingItem.classList.add('ranking-second');
-            } else if (rank === 3) {
-                rankingItem.classList.add('ranking-third');
-            }
+
+            // 上位3位はチップランキングと同じクラスを使う（CSSが既にある）
+if (rank === 1) rankingItem.classList.add('rank-1');
+if (rank === 2) rankingItem.classList.add('rank-2');
+if (rank === 3) rankingItem.classList.add('rank-3');
+
+            
             
             rankingItem.innerHTML = `
-                <div class="flex items-center">
-                    <div class="ranking-number">${rank}</div>
-                    <div class="ml-4">
-                        <div class="text-white font-semibold">${user.name}</div>
-                        <div class="text-gray-300 text-sm">@${user.username}</div>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <div class="text-yellow-300 font-bold text-lg">${totalEarnings.toLocaleString()} チップ</div>
-                    ${rank === 1 ? '<div class="text-yellow-400 text-sm">👑 チャンピオン</div>' : ''}
-                    ${rank === 2 ? '<div class="text-gray-300 text-sm">🥈 準優勝</div>' : ''}
-                    ${rank === 3 ? '<div class="text-orange-300 text-sm">🥉 3位</div>' : ''}
-                </div>
-            `;
-            
+  <div class="flex items-center">
+    <div class="rank-number">${rank}</div>
+    <div class="ml-4">
+      <div class="name-text font-semibold">${user.name}</div>
+      <div class="handle-text text-sm">@${user.username}</div>
+    </div>
+  </div>
+  <div class="text-right">
+    <div class="amount-text font-bold text-lg">${totalEarnings.toLocaleString()} チップ</div>
+    ${rank === 1 ? '<div class="label-text text-sm">👑 1位</div>' : ''}
+    ${rank === 2 ? '<div class="label-text text-sm">🥈 2位</div>' : ''}
+    ${rank === 3 ? '<div class="label-text text-sm">🥉 3位</div>' : ''}
+  </div>
+`;
+
             rankingContainer.appendChild(rankingItem);
         }
         
@@ -908,7 +962,16 @@ async function loadTournamentRanking() {
         document.getElementById('tournamentRankingList').innerHTML = '<p class="text-red-400 text-center">ランキングの読み込みに失敗しました</p>';
     }
 }
+// ランキング画面が表示中なら更新する（おすすめ）
+function refreshRankingIfVisible() {
+    const screen = document.getElementById('rankingScreen');
+    if (!screen) return;
 
+    const isVisible = !screen.classList.contains('hidden');
+    if (isVisible && typeof loadRanking === 'function') {
+        loadRanking();
+    }
+}
 // レーキ履歴表示
 async function showRakeHistory() {
     try {
@@ -1013,11 +1076,13 @@ async function loadTournamentSchedule() {
 function showWithdrawForm() {
     hideAllScreens();
     document.getElementById('withdrawForm').classList.remove('hidden');
+    showCustomerBottomNav();
 }
 
 function showDepositForm() {
     hideAllScreens();
     document.getElementById('depositForm').classList.remove('hidden');
+    showCustomerBottomNav();
 }
 
 function hideForms() {
@@ -1029,7 +1094,69 @@ function hideForms() {
 function showRanking() {
     hideAllScreens();
     document.getElementById('rankingScreen').classList.remove('hidden');
+    showCustomerBottomNav();
     loadRanking();
+}
+
+// チップ残高ランキング（残高の多い順）
+async function loadRanking() {
+    try {
+        const users = await fetchData('users');
+        const chips = await fetchData('chips');
+
+        // user_id -> balance の辞書
+        const balanceMap = new Map(chips.map(c => [c.user_id, Number(c.balance || 0)]));
+
+        // customer だけ対象にして、balance を持たせる
+        const rankingData = users
+            .filter(u => u.role === 'customer')
+            .map(u => ({
+                user: u,
+                balance: balanceMap.get(u.id) ?? 0
+            }))
+            .sort((a, b) => b.balance - a.balance);
+
+        const container = document.getElementById('rankingList');
+        container.innerHTML = '';
+
+        if (rankingData.length === 0) {
+            container.innerHTML = '<p class="text-gray-400 text-center">ランキングデータがありません</p>';
+            return;
+        }
+
+        for (let i = 0; i < rankingData.length; i++) {
+            const rank = i + 1;
+            const { user, balance } = rankingData[i];
+
+            const item = document.createElement('div');
+            item.className = 'ranking-item flex items-center justify-between';
+
+            // 上位3位は既存CSS（rank-1/2/3）を使う
+            if (rank === 1) item.classList.add('rank-1');
+            if (rank === 2) item.classList.add('rank-2');
+            if (rank === 3) item.classList.add('rank-3');
+
+           item.innerHTML = `
+  <div class="flex items-center gap-3">
+    <div class="rank-number">${rank}</div>
+    <div>
+      <div class="name-text font-semibold">${user.name}</div>
+      <div class="handle-text text-sm">@${user.username}</div>
+    </div>
+  </div>
+  <div class="text-right">
+    <div class="amount-text font-bold text-lg">${balance.toLocaleString()} チップ</div>
+  </div>
+`;
+
+
+            container.appendChild(item);
+        }
+    } catch (error) {
+        console.error('チップランキング読み込みエラー:', error);
+        document.getElementById('rankingList').innerHTML =
+            '<p class="text-red-400 text-center">ランキングの読み込みに失敗しました</p>';
+    }
 }
 
 function hideRanking() {
@@ -1121,7 +1248,7 @@ async function submitWithdraw() {
 
         // 画面の表示テキストをセット
         const confirmScreen = document.getElementById('withdrawConfirm');
-        confirmScreen.querySelector('.user-name').textContent = `${currentUser.name} (@${currentUser.username})`;
+        confirmScreen.querySelector('.user-name').textContent = `${currentUser.name}`;
         confirmScreen.querySelector('.amount').textContent = `${amount.toLocaleString()} チップ`;
 
         document.getElementById('withdrawAmount').value = '';
@@ -1284,5 +1411,100 @@ async function initializeAdminAccount() {
         console.error('管理者アカウント初期化エラー:', error);
     }
 }
+
+// 直近のプライズ配布（選択中トーナメント）を取り消す
+async function revokeLatestPrizeBatch() {
+    const tournamentId = document.getElementById('selectTournamentForPrize').value;
+    if (!tournamentId) {
+        alert('トーナメントを選択してください。');
+        return;
+    }
+    if (!confirm('直近のプライズ配布を取り消します。よろしいですか？')) return;
+
+    try {
+        // そのトーナメントの結果を取得
+        const results = await fetchData('tournament_results');
+        const target = results.filter(r => r.tournament_id === tournamentId);
+
+        if (target.length === 0) {
+            alert('このトーナメントには配布済みプライズがありません。');
+            return;
+        }
+
+        // batch_id がある前提で「直近」を取る（batch_id無しデータが混ざる場合にも最低限対応）
+        const latestCreated = Math.max(...target.map(r => r.created_at || 0));
+        const latestBatch = target
+            .filter(r => (r.created_at || 0) === latestCreated)
+            .map(r => r.batch_id)
+            .find(Boolean);
+
+        let batchResults;
+        if (latestBatch) {
+            batchResults = target.filter(r => r.batch_id === latestBatch);
+        } else {
+            // 古いデータ（batch_id無し）の場合は created_at が最新のものだけ取り消す
+            batchResults = target.filter(r => (r.created_at || 0) === latestCreated);
+        }
+
+        // まず「引けるか」チェック（マイナスになるなら止める）
+        for (const r of batchResults) {
+            const chip = await fetchSingleRecord('chips', null, `user_id=${r.user_id}`);
+            const bal = chip ? (chip.balance || 0) : 0;
+            if (bal - (r.chips_won || 0) < 0) {
+                alert(`取り消しできません。\n受取者の残高が不足しています。\nユーザーID: ${r.user_id}`);
+                return;
+            }
+        }
+
+        // 取り消し実行：残高を戻す → 履歴を消す → 結果を消す
+        const now = Date.now();
+
+        for (const r of batchResults) {
+            const chip = await fetchSingleRecord('chips', null, `user_id=${r.user_id}`);
+            await updateRecord('chips', chip.id, {
+                balance: (chip.balance || 0) - (r.chips_won || 0),
+                updated_at: now
+            });
+        }
+
+        // requests（履歴）も消す（batch_id があればそれで、無ければ tournament_id+created_at で）
+        const reqs = await fetchData('requests');
+        const toDeleteReq = reqs.filter(x =>
+            x.type === 'prize' &&
+            x.tournament_id === tournamentId &&
+            (latestBatch ? x.batch_id === latestBatch : (x.created_at || 0) === latestCreated)
+        );
+        for (const x of toDeleteReq) {
+            await deleteRecord('requests', x.id);
+        }
+
+        // tournament_results を削除
+        for (const r of batchResults) {
+            await deleteRecord('tournament_results', r.id);
+        }
+
+        alert('直近のプライズ配布を取り消しました。');
+
+        // ランキングが開いていたら更新（あなたのrefresh関数を使う）
+        if (typeof refreshRankingIfVisible === 'function') refreshRankingIfVisible();
+
+    } catch (e) {
+        console.error('プライズ取り消しエラー:', e);
+        alert('取り消しに失敗しました。');
+    }
+}
+
+function showCustomerBottomNav() {
+    const nav = document.getElementById('customerBottomNav');
+    if (nav) nav.classList.remove('hidden');
+}
+
+function hideCustomerBottomNav() {
+    const nav = document.getElementById('customerBottomNav');
+    if (nav) nav.classList.add('hidden');
+}
+
+
+
 
 // その後の実装に続きます...
